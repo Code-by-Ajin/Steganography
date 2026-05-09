@@ -1,3 +1,18 @@
+# Python
 __pycache__/
 *.pyc
 venv/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Frontend build
+frontend/dist/
+
+# Local Database (we don't want to commit the history)
+backend/data/
+
+# Environment variables
+.env
