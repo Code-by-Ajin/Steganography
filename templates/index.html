@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Steganography</title>
+<!-- Fonts loaded locally – no internet required -->
+<style>
+@import url('data:text/css,');
+*{margin:0;padding:0;box-sizing:border-box;}
+@font-face{font-family:'Orbitron';src:local('Orbitron'),local('Arial Black'),local('Impact');}
+@font-face{font-family:'Inter';src:local('Inter'),local('Segoe UI'),local('Helvetica Neue'),local('Arial');}
+:root{
+  --bg1:#0a0a1a;--bg2:#0d0d2b;--accent:#7c3aed;--accent2:#06b6d4;
+  --text:#e2e8f0;--sub:#94a3b8;--card:rgba(255,255,255,0.05);
+  --border:rgba(124,58,237,0.3);--glow:rgba(124,58,237,0.4);
+}
+body{font-family:'Inter','Segoe UI','Helvetica Neue',Arial,sans-serif;background:linear-gradient(135deg,var(--bg1),var(--bg2));color:var(--text);min-height:100vh;transition:background .4s,color .4s;}
+
+/* ── THEMES ── */
+body.white{--bg1:#f0f4ff;--bg2:#e8eef8;--accent:#6d28d9;--accent2:#0891b2;--text:#1e1b4b;--sub:#64748b;--card:rgba(0,0,0,0.05);--border:rgba(109,40,217,0.3);--glow:rgba(109,40,217,0.2);}
+body.grey{--bg1:#1a1a2e;--bg2:#16213e;--accent:#9ca3af;--accent2:#6b7280;--text:#f1f5f9;--sub:#9ca3af;--card:rgba(255,255,255,0.06);--border:rgba(156,163,175,0.3);--glow:rgba(156,163,175,0.3);}
+body.blue{--bg1:#020b1a;--bg2:#031220;--accent:#3b82f6;--accent2:#06b6d4;--text:#e0f2fe;--sub:#7dd3fc;--card:rgba(59,130,246,0.08);--border:rgba(59,130,246,0.3);--glow:rgba(59,130,246,0.4);}
+
+/* ── PARTICLES ── */
+#particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
+.particle{position:absolute;border-radius:50%;opacity:.12;animation:float linear infinite;will-change:transform;}
+@keyframes float{0%{transform:translateY(100vh) scale(0);}100%{transform:translateY(-10vh) scale(1);}}
+
+/* ── HEADER ── */
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:center;padding:28px 32px;border-bottom:1px solid var(--border);}
+
+/* ── THEME TOGGLE BUTTON ── */
+.theme-toggle{position:absolute;right:32px;background:var(--card);border:1.5px solid var(--border);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.3rem;transition:all .3s;backdrop-filter:blur(10px);}
+.theme-toggle:hover{border-color:var(--accent);box-shadow:0 0 18px var(--glow);transform:rotate(20deg) scale(1.1);}
+
+/* ── THEME POPUP ── */
+.theme-popup{position:absolute;top:calc(100% + 12px);right:32px;background:linear-gradient(135deg,var(--bg1),var(--bg2));border:1px solid var(--border);border-radius:18px;padding:20px;width:240px;z-index:200;backdrop-filter:blur(20px);box-shadow:0 16px 48px rgba(0,0,0,.5);display:none;flex-direction:column;gap:10px;animation:popIn .25s ease;}
+.theme-popup.open{display:flex;}
+@keyframes popIn{from{opacity:0;transform:translateY(-10px) scale(.96);}to{opacity:1;transform:translateY(0) scale(1);}}
+.theme-popup-title{font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--sub);letter-spacing:.18em;text-transform:uppercase;margin-bottom:4px;text-align:center;}
+.theme-card{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--border);cursor:pointer;transition:all .25s;background:var(--card);}
+.theme-card:hover{border-color:var(--accent);transform:translateX(4px);box-shadow:0 4px 16px var(--glow);}
+.theme-card.active{border-color:var(--accent);background:rgba(124,58,237,.12);}
+.tc-swatch{width:28px;height:28px;border-radius:50%;border:2px solid rgba(255,255,255,.15);flex-shrink:0;}
+.tc-swatch.black{background:radial-gradient(circle,#1a1a2e,#0a0a1a);}
+.tc-swatch.white{background:radial-gradient(circle,#f0f4ff,#c7d2fe);}
+.tc-swatch.grey{background:radial-gradient(circle,#4b5563,#1f2937);}
+.tc-swatch.blue{background:radial-gradient(circle,#3b82f6,#0284c7);}
+.tc-info{display:flex;flex-direction:column;}
+.tc-name{font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:700;color:var(--text);letter-spacing:.08em;}
+.tc-desc{font-size:.68rem;color:var(--sub);margin-top:2px;}
+.tc-check{margin-left:auto;color:var(--accent);font-size:1rem;opacity:0;transition:opacity .2s;}
+.theme-card.active .tc-check{opacity:1;}
+
+/* title */
+.title-wrap{text-align:center;}
+.title-main{font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:2.4rem;font-weight:900;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  letter-spacing:.12em;text-shadow:none;}
+.title-sub{font-size:.75rem;color:var(--sub);letter-spacing:.25em;margin-top:4px;}
+
+/* ── HERO ── */
+.hero{position:relative;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 100px);padding:40px 20px;}
+.hero-card{background:var(--card);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:24px;padding:56px 64px;text-align:center;max-width:620px;width:100%;}
+.hero-card h2{font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:1.2rem;color:var(--sub);letter-spacing:.15em;margin-bottom:8px;}
+.hero-card p{color:var(--sub);font-size:.9rem;margin-bottom:40px;line-height:1.7;}
+.options{display:flex;gap:24px;justify-content:center;flex-wrap:wrap;}
+.option-btn{position:relative;padding:24px 48px;border-radius:16px;border:1.5px solid var(--border);background:var(--card);cursor:pointer;transition:all .3s;overflow:hidden;min-width:180px;}
+.option-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--accent),var(--accent2));opacity:0;transition:opacity .3s;border-radius:16px;}
+.option-btn:hover::before{opacity:.15;}
+.option-btn:hover{border-color:var(--accent);transform:translateY(-4px);box-shadow:0 12px 40px var(--glow);}
+.option-btn .icon{font-size:2.4rem;margin-bottom:12px;display:block;position:relative;z-index:1;}
+.option-btn .label{font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.1em;color:var(--text);position:relative;z-index:1;}
+.option-btn .desc{font-size:.75rem;color:var(--sub);margin-top:6px;position:relative;z-index:1;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(8px);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.active{display:flex;animation:fadeIn .3s;}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+.modal{background:linear-gradient(135deg,var(--bg1),var(--bg2));border:1px solid var(--border);border-radius:24px;width:100%;max-width:860px;max-height:90vh;overflow-y:auto;padding:40px;position:relative;animation:slideUp .35s ease;}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-close{position:absolute;top:20px;right:24px;background:none;border:none;color:var(--sub);font-size:1.6rem;cursor:pointer;transition:color .2s;}
+.modal-close:hover{color:var(--text);}
+.modal-title{font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:1.4rem;font-weight:700;background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:32px;}
+.boxes{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:28px;}
+@media(max-width:640px){.boxes{grid-template-columns:1fr;}}
+.box-label{font-size:.75rem;color:var(--sub);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px;}
+
+/* upload zone */
+.upload-zone{border:2px dashed var(--border);border-radius:14px;padding:32px 16px;text-align:center;cursor:pointer;transition:all .3s;background:var(--card);min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:rgba(124,58,237,.08);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.upload-zone .uz-icon{font-size:2.2rem;margin-bottom:8px;}
+.upload-zone .uz-text{font-size:.82rem;color:var(--sub);}
+.upload-zone img{max-width:100%;max-height:140px;border-radius:8px;object-fit:contain;}
+
+/* message textarea */
+.msg-area{width:100%;min-height:180px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px;color:var(--text);font-family:'Inter',sans-serif;font-size:.9rem;resize:vertical;transition:border-color .2s;outline:none;}
+.msg-area:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow);}
+
+/* proceed / action btn */
+.proc-btn{width:100%;padding:16px;border-radius:14px;border:none;background:linear-gradient(90deg,var(--accent),var(--accent2));color:#fff;font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:.95rem;font-weight:700;letter-spacing:.1em;cursor:pointer;transition:all .3s;position:relative;overflow:hidden;}
+.proc-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px var(--glow);}
+.proc-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+
+/* processing */
+.processing{display:none;text-align:center;padding:20px 0;}
+.spinner{width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.proc-text{color:var(--accent2);font-family:'Orbitron',sans-serif;font-size:.85rem;letter-spacing:.1em;}
+
+/* result */
+.result-area{display:none;text-align:center;margin-top:24px;}
+.result-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.4);border-radius:30px;padding:8px 20px;color:#10b981;font-family:'Orbitron',sans-serif;font-size:.8rem;letter-spacing:.1em;margin-bottom:20px;}
+.result-img{max-width:100%;max-height:280px;border-radius:14px;border:1.5px solid var(--border);object-fit:contain;}
+.save-btn{margin-top:16px;padding:12px 36px;border-radius:12px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-family:'Orbitron','Arial Black',Impact,sans-serif;font-size:.85rem;font-weight:700;cursor:pointer;transition:all .3s;letter-spacing:.08em;}
+.save-btn:hover{background:var(--accent);color:#fff;box-shadow:0 6px 24px var(--glow);}
+
+/* extract output */
+.output-box{min-height:180px;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:16px;color:var(--text);font-size:.9rem;line-height:1.7;word-break:break-word;white-space:pre-wrap;}
+.output-placeholder{color:var(--sub);font-style:italic;font-size:.85rem;}
+
+/* error */
+.err-msg{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.4);border-radius:10px;padding:12px 16px;color:#f87171;font-size:.85rem;margin-top:16px;display:none;}
+</style>
+</head>
+<body>
+
+<!-- Particles -->
+<div id="particles"></div>
+
+<!-- Header -->
+<header>
+  <div class="title-wrap">
+    <div class="title-main">STEGANOGRAPHY</div>
+    <div class="title-sub">Hide Messages Inside Images</div>
+  </div>
+  <button class="theme-toggle" id="theme-toggle-btn" onclick="toggleThemePopup()" title="Change Theme">🎨</button>
+  <div class="theme-popup" id="theme-popup">
+    <div class="theme-popup-title">Choose Theme</div>
+    <div class="theme-card active" id="tc-black" onclick="applyTheme('black')">
+      <div class="tc-swatch black"></div>
+      <div class="tc-info"><div class="tc-name">BLACK</div><div class="tc-desc">Dark cosmic</div></div>
+      <span class="tc-check">✓</span>
+    </div>
+    <div class="theme-card" id="tc-white" onclick="applyTheme('white')">
+      <div class="tc-swatch white"></div>
+      <div class="tc-info"><div class="tc-name">WHITE</div><div class="tc-desc">Clean light</div></div>
+      <span class="tc-check">✓</span>
+    </div>
+    <div class="theme-card" id="tc-grey" onclick="applyTheme('grey')">
+      <div class="tc-swatch grey"></div>
+      <div class="tc-info"><div class="tc-name">GREY</div><div class="tc-desc">Subtle mist</div></div>
+      <span class="tc-check">✓</span>
+    </div>
+    <div class="theme-card" id="tc-blue" onclick="applyTheme('blue')">
+      <div class="tc-swatch blue"></div>
+      <div class="tc-info"><div class="tc-name">BLUE</div><div class="tc-desc">Ocean depth</div></div>
+      <span class="tc-check">✓</span>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-card">
+    <h2>Choose Operation</h2>
+    <p>Conceal secret messages within images or reveal hidden content using advanced LSB steganography.</p>
+    <div class="options">
+      <button class="option-btn" id="btn-insert" onclick="openInsert()">
+        <span class="icon">🔒</span>
+        <div class="label">INSERT</div>
+        <div class="desc">Embed a secret message</div>
+      </button>
+      <button class="option-btn" id="btn-extract" onclick="openExtract()">
+        <span class="icon">🔓</span>
+        <div class="label">EXTRACT</div>
+        <div class="desc">Reveal hidden message</div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- INSERT MODAL -->
+<div class="modal-overlay" id="modal-insert">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-insert')">✕</button>
+    <div class="modal-title">🔒 Insert Secret Message</div>
+    <div class="boxes">
+      <div>
+        <div class="box-label">📁 Upload Image</div>
+        <div class="upload-zone" id="ins-zone" ondragover="dragOver(event,'ins-zone')" ondragleave="dragLeave('ins-zone')" ondrop="dropFile(event,'ins-file','ins-zone','ins-preview')">
+          <input type="file" id="ins-file" accept="image/*" onchange="previewImg('ins-file','ins-zone','ins-preview')"/>
+          <img id="ins-preview" style="display:none"/>
+          <div id="ins-placeholder">
+            <div class="uz-icon">🖼️</div>
+            <div class="uz-text">Click or drag & drop<br/>PNG / JPG / BMP</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="box-label">✉️ Secret Message</div>
+        <textarea class="msg-area" id="ins-msg" placeholder="Type your secret message here..."></textarea>
+      </div>
+    </div>
+    <button class="proc-btn" id="ins-btn" onclick="doEncode()">⚡ PROCEED</button>
+    <div class="processing" id="ins-processing">
+      <div class="spinner"></div>
+      <div class="proc-text">Embedding message into image...</div>
+    </div>
+    <div class="err-msg" id="ins-err"></div>
+    <div class="result-area" id="ins-result">
+      <div class="result-badge">✅ Process Completed!</div><br/>
+      <img id="ins-result-img" class="result-img" src="" alt="Encoded Image"/>
+      <br/>
+      <button class="save-btn" onclick="saveImage()">💾 Save Image</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXTRACT MODAL -->
+<div class="modal-overlay" id="modal-extract">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('modal-extract')">✕</button>
+    <div class="modal-title">🔓 Extract Hidden Message</div>
+    <div class="boxes">
+      <div>
+        <div class="box-label">📁 Input Image</div>
+        <div class="upload-zone" id="ext-zone" ondragover="dragOver(event,'ext-zone')" ondragleave="dragLeave('ext-zone')" ondrop="dropFile(event,'ext-file','ext-zone','ext-preview')">
+          <input type="file" id="ext-file" accept="image/*" onchange="previewImg('ext-file','ext-zone','ext-preview')"/>
+          <img id="ext-preview" style="display:none"/>
+          <div id="ext-placeholder">
+            <div class="uz-icon">🔍</div>
+            <div class="uz-text">Click or drag & drop<br/>Stego Image</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="box-label">📜 Extracted Message</div>
+        <div class="output-box" id="ext-output">
+          <span class="output-placeholder">Hidden message will appear here after extraction...</span>
+        </div>
+      </div>
+    </div>
+    <button class="proc-btn" id="ext-btn" onclick="doDecode()">🔍 EXTRACT MESSAGE</button>
+    <div class="processing" id="ext-processing">
+      <div class="spinner"></div>
+      <div class="proc-text">Scanning image for hidden data...</div>
+    </div>
+    <div class="err-msg" id="ext-err"></div>
+  </div>
+</div>
+
+<script>
+// ─── Particles ───────────────────────────────────────────────────────────────
+(function(){
+  const container = document.getElementById('particles');
+  const colors = ['#7c3aed','#06b6d4','#8b5cf6','#22d3ee'];
+  for(let i=0;i<12;i++){
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = Math.random()*6+3;
+    p.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${Math.random()*15+8}s;
+      animation-delay:${Math.random()*10}s;`;
+    container.appendChild(p);
+  }
+})();
+
+// ─── Theme Popup ─────────────────────────────────────────────────────────────
+let currentTheme = 'black';
+function toggleThemePopup(){
+  document.getElementById('theme-popup').classList.toggle('open');
+}
+function applyTheme(t){
+  currentTheme = t;
+  document.body.className = t==='black'?'':t;
+  document.querySelectorAll('.theme-card').forEach(c=>c.classList.remove('active'));
+  document.getElementById('tc-'+t).classList.add('active');
+  document.getElementById('theme-popup').classList.remove('open');
+}
+// Close popup when clicking outside
+document.addEventListener('click',e=>{
+  const popup = document.getElementById('theme-popup');
+  const btn   = document.getElementById('theme-toggle-btn');
+  if(popup.classList.contains('open') && !popup.contains(e.target) && e.target!==btn){
+    popup.classList.remove('open');
+  }
+});
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+function openInsert(){document.getElementById('modal-insert').classList.add('active');}
+function openExtract(){document.getElementById('modal-extract').classList.add('active');}
+function closeModal(id){
+  document.getElementById(id).classList.remove('active');
+  if(id==='modal-insert') resetInsert();
+  else resetExtract();
+}
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id);});
+});
+
+// ─── Drag & Drop ─────────────────────────────────────────────────────────────
+function dragOver(e,id){e.preventDefault();document.getElementById(id).classList.add('drag');}
+function dragLeave(id){document.getElementById(id).classList.remove('drag');}
+function dropFile(e,fileId,zoneId,previewId){
+  e.preventDefault();
+  dragLeave(zoneId);
+  const file = e.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/')) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById(fileId).files = dt.files;
+  showPreview(file,zoneId,previewId);
+}
+function previewImg(fileId,zoneId,previewId){
+  const file = document.getElementById(fileId).files[0];
+  if(file) showPreview(file,zoneId,previewId);
+}
+function showPreview(file,zoneId,previewId){
+  const reader = new FileReader();
+  reader.onload=e=>{
+    const img = document.getElementById(previewId);
+    img.src = e.target.result;
+    img.style.display='block';
+    const zone = document.getElementById(zoneId);
+    const placeholder = zone.querySelector('[id$="placeholder"]');
+    if(placeholder) placeholder.style.display='none';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ─── Encode ───────────────────────────────────────────────────────────────────
+let encodedB64 = '';
+
+async function doEncode(){
+  const file = document.getElementById('ins-file').files[0];
+  const msg  = document.getElementById('ins-msg').value.trim();
+  if(!file){showErr('ins-err','Please upload an image first.');return;}
+  if(!msg){showErr('ins-err','Please enter a secret message.');return;}
+
+  hideErr('ins-err');
+  document.getElementById('ins-result').style.display='none';
+  document.getElementById('ins-btn').disabled=true;
+  document.getElementById('ins-processing').style.display='block';
+
+  const form = new FormData();
+  form.append('image',file);
+  form.append('message',msg);
+
+  try{
+    const res = await fetch('/encode',{method:'POST',body:form});
+    const data = await res.json();
+    document.getElementById('ins-processing').style.display='none';
+    document.getElementById('ins-btn').disabled=false;
+    if(data.success){
+      encodedB64 = data.image;
+      document.getElementById('ins-result-img').src='data:image/png;base64,'+data.image;
+      document.getElementById('ins-result').style.display='block';
+    } else showErr('ins-err',data.error);
+  } catch(e){
+    document.getElementById('ins-processing').style.display='none';
+    document.getElementById('ins-btn').disabled=false;
+    showErr('ins-err','Network error. Is the server running?');
+  }
+}
+
+async function saveImage(){
+  try{
+    const res = await fetch('/download',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:encodedB64})});
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'stego_image.png';
+    a.click();
+  } catch(e){ alert('Save failed.'); }
+}
+
+// ─── Decode ───────────────────────────────────────────────────────────────────
+async function doDecode(){
+  const file = document.getElementById('ext-file').files[0];
+  if(!file){showErr('ext-err','Please upload a stego image first.');return;}
+
+  hideErr('ext-err');
+  document.getElementById('ext-output').innerHTML='<span class="output-placeholder">Extracting...</span>';
+  document.getElementById('ext-btn').disabled=true;
+  document.getElementById('ext-processing').style.display='block';
+
+  const form = new FormData();
+  form.append('image',file);
+
+  try{
+    const res = await fetch('/decode',{method:'POST',body:form});
+    const data = await res.json();
+    document.getElementById('ext-processing').style.display='none';
+    document.getElementById('ext-btn').disabled=false;
+    if(data.success){
+      document.getElementById('ext-output').textContent = data.message;
+    } else showErr('ext-err',data.error);
+  } catch(e){
+    document.getElementById('ext-processing').style.display='none';
+    document.getElementById('ext-btn').disabled=false;
+    showErr('ext-err','Network error. Is the server running?');
+  }
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function showErr(id,msg){const el=document.getElementById(id);el.textContent=msg;el.style.display='block';}
+function hideErr(id){document.getElementById(id).style.display='none';}
+function resetInsert(){
+  document.getElementById('ins-file').value='';
+  document.getElementById('ins-preview').style.display='none';
+  document.getElementById('ins-placeholder').style.display='';
+  document.getElementById('ins-msg').value='';
+  document.getElementById('ins-result').style.display='none';
+  document.getElementById('ins-processing').style.display='none';
+  document.getElementById('ins-btn').disabled=false;
+  hideErr('ins-err');
+  encodedB64='';
+}
+function resetExtract(){
+  document.getElementById('ext-file').value='';
+  document.getElementById('ext-preview').style.display='none';
+  document.getElementById('ext-placeholder').style.display='';
+  document.getElementById('ext-output').innerHTML='<span class="output-placeholder">Hidden message will appear here after extraction...</span>';
+  document.getElementById('ext-processing').style.display='none';
+  document.getElementById('ext-btn').disabled=false;
+  hideErr('ext-err');
+}
+</script>
+</body>
+</html>
